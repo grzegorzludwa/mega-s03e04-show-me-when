@@ -13,11 +13,29 @@
       <h1>incidents</h1>
       <p class="sub">sched-prod · tonight · <span class="status" data-role="status" aria-live="polite"></span></p>
     </header>
-    <main data-testid="board">
-      <p data-testid="loader" class="loader" role="status">Loading incidents…</p>
-      <p data-testid="empty" class="empty" hidden>No incidents tonight.</p>
-      <p class="error" data-role="error" role="alert" hidden></p>
-      <ul data-testid="incident-list" class="list"></ul>
+    <main data-testid="board" class="board">
+      <section class="feed">
+        <p data-testid="loader" class="loader" role="status">Loading incidents…</p>
+        <p data-testid="empty" class="empty" hidden>No incidents tonight.</p>
+        <p class="error" data-role="error" role="alert" hidden></p>
+        <ul data-testid="incident-list" class="list" aria-label="Incidents, newest first. Pick one to open it."></ul>
+      </section>
+      <aside class="panel-slot" aria-live="polite">
+        <p class="panel-hint" data-role="panel-hint">Pick an incident to open it. Ack is in its panel.</p>
+        <section data-testid="incident-panel" class="panel" data-role="panel" hidden aria-labelledby="panel-title">
+          <h2 id="panel-title"></h2>
+          <dl>
+            <dt>Severity</dt><dd data-role="p-sev"></dd>
+            <dt>Service</dt><dd data-role="p-service"></dd>
+            <dt>Region</dt><dd data-role="p-region"></dd>
+            <dt>Summary</dt><dd data-role="p-summary"></dd>
+            <dt>Opened</dt><dd><time data-role="p-time"></time></dd>
+          </dl>
+          <button type="button" data-testid="panel-ack" class="panel-ack"></button>
+          <p class="panel-acked" data-role="p-acked" hidden></p>
+          <button type="button" class="panel-close" data-role="p-close">Close</button>
+        </section>
+      </aside>
     </main>
     <footer>sched-prod incident board · build <code data-testid="build-sha">__BUILD_SHA__</code></footer>
   </body>

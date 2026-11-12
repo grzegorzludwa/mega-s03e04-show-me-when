@@ -72,24 +72,75 @@ const tests = {
     assert.equal(await page.locator('.what').first().textContent(), 'booking-api · eu-west · <b>INC-C</b>', 'summary is text, not HTML');
     await ctx.close();
   },
-  async 'SCHED-4511 Ack acks that row and marks it, survives refresh'() {
+  async 'SCHED-4515 rows carry no Ack; a row opens its panel; panel Ack acks the id the panel names'() {
     const a = inc('INC-A', 10), b = inc('INC-B', 5), c = inc('INC-C', 1);
     const { ctx, page, calls } = await board({ pages: [[b, a], [c, b, a]] });
-    await page.locator('[data-testid="incident-row"][data-id="INC-A"] [data-testid="ack"]').click();
+    await page.locator('[data-testid="incident-row"]').first().waitFor();
+    assert.equal(await page.locator('[data-testid="incident-row"] [data-testid="ack"]').count(), 0, 'no Ack in rows');
+    await page.locator('[data-testid="incident-row"][data-id="INC-A"]').click();
+    const panel = page.locator('[data-testid="incident-panel"]');
+    await panel.waitFor({ state: 'visible' });
+    assert.match(await panel.innerText(), /INC-A/);
+    // the list moves while the panel is open: a new incident arrives at the top
+    await page.waitForFunction(() => document.querySelector('[data-testid="incident-row"]').dataset.id === 'INC-C');
+    assert.match(await panel.innerText(), /INC-A/, 'panel still names INC-A after the list moved');
+    await page.locator('[data-testid="panel-ack"]').click();
     await page.locator('[data-testid="incident-row"][data-id="INC-A"] [data-testid="acked"]').waitFor();
     assert.deepEqual(calls.acks.map((x) => x.id), ['INC-A']);
     assert.ok(calls.acks[0].cursor, 'ack sends a cursor');
-    await page.waitForFunction(() => document.querySelectorAll('[data-testid="incident-row"]').length === 3);
     assert.equal(await page.locator('[data-testid="acked"]').count(), 1);
-    assert.equal(await page.locator('[data-testid="incident-row"][data-id="INC-B"] [data-testid="ack"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="panel-ack"]').isVisible(), false, 'no second Ack for an acked incident');
     await ctx.close();
   },
-  async 'failed ack keeps the button and says which incident failed'() {
+  async 'SCHED-4515 a click that lands on a moved row opens that row, and the panel says so; re-pick works'() {
+    const a = inc('INC-A', 10), b = inc('INC-B', 5), c = inc('INC-C', 3), d = inc('INC-D', 1);
+    const { ctx, page, calls } = await board({ pages: [[c, b, a], [c, b, a], [d, c, b, a]] });
+    const target = page.locator('[data-testid="incident-row"][data-id="INC-B"]');
+    await target.waitFor();
+    const box = await target.boundingBox();
+    await page.waitForFunction(() => document.querySelector('[data-testid="incident-row"]').dataset.id === 'INC-D');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); // where INC-B was
+    const panel = page.locator('[data-testid="incident-panel"]');
+    await panel.waitFor({ state: 'visible' });
+    assert.match(await panel.innerText(), /INC-C/, 'panel names the row actually clicked');
+    assert.equal(calls.acks.length, 0, 'a misplaced click acks nothing');
+    await target.click(); // panel does not cover rows
+    assert.match(await panel.innerText(), /INC-B/);
+    await page.locator('[data-testid="panel-ack"]').click();
+    await page.locator('[data-testid="incident-row"][data-id="INC-B"] [data-testid="acked"]').waitFor();
+    assert.deepEqual(calls.acks.map((x) => x.id), ['INC-B']);
+    await ctx.close();
+  },
+  async 'rows are never removed or moved while the board refreshes'() {
+    const a = inc('INC-A', 10), b = inc('INC-B', 5), c = inc('INC-C', 1);
+    const { ctx, page } = await board({ pages: [[b, a], [a, b], [c, b, a], [c, a]] });
+    await page.locator('[data-testid="incident-row"]').first().waitFor();
+    await page.evaluate(() => {
+      window.__removed = 0;
+      new MutationObserver((rs) => rs.forEach((r) => r.removedNodes.forEach((n) => n.dataset?.testid === 'incident-row' && window.__removed++)))
+        .observe(document.querySelector('[data-testid="incident-list"]'), { childList: true });
+    });
+    await page.waitForTimeout(6500);
+    assert.equal(await page.evaluate(() => window.__removed), 0);
+    assert.deepEqual(await ids(page), ['INC-C', 'INC-B', 'INC-A']);
+    await ctx.close();
+  },
+  async 'keyboard: Enter on a row opens its panel, Escape closes it'() {
+    const { ctx, page } = await board({ pages: [[inc('INC-A', 1)]] });
+    await page.locator('[data-testid="incident-row"]').first().focus();
+    await page.keyboard.press('Enter');
+    await page.locator('[data-testid="incident-panel"]').waitFor({ state: 'visible' });
+    await page.keyboard.press('Escape');
+    await page.locator('[data-testid="incident-panel"]').waitFor({ state: 'hidden' });
+    await ctx.close();
+  },
+  async 'failed ack keeps the panel Ack and says which incident failed'() {
     const { ctx, page } = await board({ pages: [[inc('INC-A', 1)]], ackStatus: 400 });
-    await page.locator('[data-testid="ack"]').click();
+    await page.locator('[data-testid="incident-row"]').first().click();
+    await page.locator('[data-testid="panel-ack"]').click();
     await page.locator('[data-role="error"]').getByText('Ack failed for INC-A').waitFor();
     assert.equal(await page.locator('[data-testid="acked"]').count(), 0);
-    assert.equal(await page.locator('[data-testid="ack"]').isEnabled(), true);
+    assert.equal(await page.locator('[data-testid="panel-ack"]').isEnabled(), true);
     await ctx.close();
   },
   async 'SCHED-4514 Auckland and Berlin each see their own zone and order'() {
