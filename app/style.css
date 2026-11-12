@@ -3,9 +3,17 @@ header, main, footer { padding: 12px 24px; }
 h1 { margin: 0; font-size: 22px; }
 .sub { margin: 2px 0 0; color: #666; }
 .list { list-style: none; margin: 0; padding: 0; max-width: 960px; }
-.row { display: grid; grid-template-columns: 90px 50px 1fr 200px auto; gap: 12px; align-items: center; min-height: 44px; padding: 0 12px; border-bottom: 1px solid #e5e5e5; background: #fff; }
+.row { display: grid; grid-template-columns: 90px 50px 1fr 190px 90px; gap: 12px; align-items: center; min-height: 44px; padding: 0 12px; border-bottom: 1px solid #e5e5e5; background: #fff; }
 .row .id { font-family: ui-monospace, monospace; }
 .row.sev1 .sev { color: #b00020; font-weight: 600; }
 .row.sev2 .sev { color: #a15c00; }
 .row time { color: #555; font-variant-numeric: tabular-nums; }
 footer { color: #777; font-size: 13px; }
+.loader, .empty { color: #555; padding: 12px; }
+.error { color: #b00020; padding: 8px 12px; background: #fff0f0; border: 1px solid #f3c2c2; max-width: 936px; }
+.row button { font: inherit; padding: 4px 14px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
+.row button:disabled { cursor: progress; opacity: 0.6; }
+.row.is-acked { background: #f2f8f2; }
+.acked { color: #1b6e2b; font-weight: 600; }
+.status { color: #888; }
+footer code { font-family: ui-monospace, monospace; }
